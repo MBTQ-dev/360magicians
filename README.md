@@ -1,10 +1,44 @@
 # 360 Magicians
 
-A comprehensive distributed agentic system for vision to idea idea to validation, validated to justified, justified report to proposal, approved proposal to dev to preview tohotloades?building, and community curation dao with accessibility features showcase.
+[![Release](https://github.com/MBTQ-dev/360magicians/actions/workflows/release.yml/badge.svg)](https://github.com/MBTQ-dev/360magicians/actions/workflows/release.yml)
+[![Version Check](https://github.com/MBTQ-dev/360magicians/actions/workflows/version-check.yml/badge.svg)](https://github.com/MBTQ-dev/360magicians/actions/workflows/version-check.yml)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](./version.txt)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![GitHub issues](https://img.shields.io/github/issues/MBTQ-dev/360magicians)](https://github.com/MBTQ-dev/360magicians/issues)
+[![GitHub stars](https://img.shields.io/github/stars/MBTQ-dev/360magicians)](https://github.com/MBTQ-dev/360magicians/stargazers)
+[![GitHub license](https://img.shields.io/github/license/MBTQ-dev/360magicians)](https://github.com/MBTQ-dev/360magicians/blob/main/LICENSE)
+
+A comprehensive distributed agentic system for vision to idea, idea to validation, validated to justified, justified report to proposal, approved proposal to dev to preview to hot-loaded building, and community curation DAO with accessibility features showcase.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Versioning](#versioning)
+- [CI/CD Integration](#cicd-integration)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+
+---
 
 ## Overview
 
 360 Magicians is an intelligent system that orchestrates multiple AI agents to help validate ideas, build projects, and manage community curation. The platform emphasizes accessibility, particularly for ASL (American Sign Language) support, and integrates with various services for real-time collaboration and knowledge management.
+
+## Features
+
+- 🤖 **Multi-Agent Orchestration** - Coordinates multiple AI agents for complex workflows
+- ✅ **Idea Validation** - Automated validation of ideas with AI-powered scoring
+- 🏗️ **Project Building** - Transform validated ideas into structured projects
+- ♿ **Accessibility First** - Built-in ASL support and accessibility features
+- 🔄 **Real-time Collaboration** - PinkSync integration for live updates and alerts
+- 📊 **Knowledge Management** - RAG memory and Elasticsearch integration
+- 🏛️ **Community DAO** - Decentralized curation and governance features
 
 ## Project Structure
 
@@ -138,8 +172,15 @@ When contributing to this project:
 
 ## License
 
-[License information to be added]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contact
 
-[Contact information to be added]
+- **Repository**: [github.com/MBTQ-dev/360magicians](https://github.com/MBTQ-dev/360magicians)
+- **Issues**: [Report a bug or request a feature](https://github.com/MBTQ-dev/360magicians/issues)
+
+---
+
+<p align="center">
+  Made with ❤️ by the 360 Magicians Team
+</p>
