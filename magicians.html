@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>360 Magicians — Unified Distributed Agent System</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void:    #060810;
+  --deep:    #0d1120;
+  --surface: #131828;
+  --card:    #181e30;
+  --rim:     rgba(255,210,80,0.12);
+  --gold:    #f5c842;
+  --amber:   #e8902a;
+  --teal:    #2cd9c5;
+  --coral:   #ff5f6d;
+  --sky:     #6eb5ff;
+  --violet:  #a78bfa;
+  --lime:    #8aed7a;
+  --text:    #e8e4f8;
+  --sub:     #8884a8;
+  --serif:   'Instrument Serif', Georgia, serif;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Outfit', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+font-family: var(–sans);
+background: var(–void);
+color: var(–text);
+min-height: 100vh;
+overflow-x: hidden;
+}
+
+/* Noise texture */
+body::before {
+content: ‘’;
+position: fixed; inset: 0;
+background-image: url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 200 200’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘n’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.9’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23n)’ opacity=‘0.04’/%3E%3C/svg%3E”);
+pointer-events: none; z-index: 0; opacity: 0.6;
+}
+
+/* Subtle diagonal gradient */
+body::after {
+content: ‘’;
+position: fixed; inset: 0;
+background: radial-gradient(ellipse 80% 60% at 20% 0%, rgba(245,200,66,0.04) 0%, transparent 60%),
+radial-gradient(ellipse 60% 50% at 80% 100%, rgba(44,217,197,0.04) 0%, transparent 60%);
+pointer-events: none; z-index: 0;
+}
+
+/* ==============================
+TOPBAR
+============================== */
+.topbar {
+position: sticky; top: 0; z-index: 300;
+height: 56px;
+display: flex; align-items: center; justify-content: space-between;
+padding: 0 28px;
+background: rgba(6,8,16,0.88);
+backdrop-filter: blur(24px);
+border-bottom: 1px solid var(–rim);
+}
+
+.tb-brand {
+display: flex; align-items: center; gap: 12px;
+}
+
+.brand-icon {
+width: 32px; height: 32px;
+background: linear-gradient(135deg, var(–gold), var(–amber));
+border-radius: 8px;
+display: grid; place-items: center;
+font-size: 1rem;
+flex-shrink: 0;
+}
+
+.brand-name {
+font-family: var(–serif);
+font-size: 1.15rem;
+font-style: italic;
+letter-spacing: 0.01em;
+}
+.brand-name span { color: var(–gold); font-style: normal; }
+
+.tb-nav {
+display: flex; align-items: center; gap: 4px;
+}
+
+.tb-nav-btn {
+font-family: var(–mono);
+font-size: 0.6rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+padding: 5px 12px;
+border-radius: 6px;
+border: 1px solid transparent;
+background: transparent;
+color: var(–sub);
+cursor: pointer;
+transition: all 0.15s;
+}
+.tb-nav-btn:hover, .tb-nav-btn.active {
+color: var(–text);
+background: rgba(245,200,66,0.06);
+border-color: var(–rim);
+}
+
+.tb-right { display: flex; align-items: center; gap: 8px; }
+
+.chip {
+font-family: var(–mono);
+font-size: 0.58rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 3px 10px;
+border-radius: 100px;
+border: 1px solid;
+}
+.chip-gold   { color: var(–gold);   border-color: rgba(245,200,66,0.3);  background: rgba(245,200,66,0.07); }
+.chip-teal   { color: var(–teal);   border-color: rgba(44,217,197,0.3);  background: rgba(44,217,197,0.06); }
+.chip-coral  { color: var(–coral);  border-color: rgba(255,95,109,0.3);  background: rgba(255,95,109,0.06); }
+
+/* ==============================
+MAIN LAYOUT
+============================== */
+.wrap { position: relative; z-index: 10; padding: 28px; max-width: 1360px; margin: 0 auto; }
+
+/* ==============================
+HERO
+============================== */
+.hero {
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 32px;
+align-items: end;
+padding-bottom: 28px;
+margin-bottom: 28px;
+border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.hero-eyebrow {
+font-family: var(–mono);
+font-size: 0.62rem;
+letter-spacing: 0.2em;
+text-transform: uppercase;
+color: var(–gold);
+margin-bottom: 10px;
+display: flex; align-items: center; gap: 10px;
+}
+.hero-eyebrow::before { content: ‘◆’; font-size: 0.5rem; }
+
+.hero-title {
+font-family: var(–serif);
+font-size: clamp(2.4rem, 5vw, 4rem);
+line-height: 1.05;
+font-style: italic;
+}
+.hero-title strong { font-style: normal; color: var(–gold); font-family: var(–sans); font-weight: 700; }
+
+.hero-sub {
+font-size: 0.85rem;
+color: var(–sub);
+margin-top: 10px;
+line-height: 1.7;
+max-width: 540px;
+}
+
+.hero-deaf-badge {
+display: inline-flex; align-items: center; gap: 8px;
+background: rgba(44,217,197,0.06);
+border: 1px solid rgba(44,217,197,0.2);
+border-radius: 8px;
+padding: 8px 14px;
+font-size: 0.72rem;
+color: var(–teal);
+margin-top: 14px;
+}
+
+.hero-stats {
+display: grid;
+grid-template-rows: repeat(4, auto);
+gap: 12px;
+min-width: 180px;
+}
+
+.stat-cell {
+background: var(–card);
+border: 1px solid var(–rim);
+border-radius: 10px;
+padding: 12px 16px;
+text-align: right;
+}
+.stat-label { font-family: var(–mono); font-size: 0.55rem; color: var(–sub); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+.stat-value { font-family: var(–serif); font-size: 1.4rem; font-style: italic; }
+
+/* ==============================
+SECTION HEADER
+============================== */
+.sec-header {
+display: flex; align-items: center; gap: 12px;
+margin-bottom: 16px;
+}
+.sec-title {
+font-family: var(–mono);
+font-size: 0.65rem;
+letter-spacing: 0.14em;
+text-transform: uppercase;
+color: var(–sub);
+}
+.sec-line { flex: 1; height: 1px; background: rgba(255,255,255,0.05); }
+
+/* ==============================
+MAGICIAN GRID
+============================== */
+.magician-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+gap: 12px;
+margin-bottom: 28px;
+}
+
+.mag-card {
+background: var(–card);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 12px;
+padding: 18px 16px;
+cursor: pointer;
+transition: border-color 0.2s, transform 0.15s, background 0.2s;
+position: relative;
+overflow: hidden;
+}
+.mag-card::before {
+content: ‘’;
+position: absolute; top: 0; left: 0; right: 0;
+height: 2px;
+background: var(–accent, var(–gold));
+opacity: 0;
+transition: opacity 0.2s;
+}
+.mag-card:hover, .mag-card.selected {
+border-color: rgba(245,200,66,0.3);
+background: rgba(245,200,66,0.03);
+transform: translateY(-2px);
+}
+.mag-card:hover::before, .mag-card.selected::before { opacity: 1; }
+
+.mag-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+
+.mag-avatar {
+width: 40px; height: 40px;
+border-radius: 10px;
+display: grid; place-items: center;
+font-size: 1.2rem;
+flex-shrink: 0;
+}
+
+.mag-status {
+width: 8px; height: 8px;
+border-radius: 50%;
+margin-top: 4px;
+}
+.mag-status.live   { background: var(–lime); box-shadow: 0 0 0 3px rgba(138,237,122,0.15); }
+.mag-status.live::after {
+content: ‘’; display: block;
+width: 8px; height: 8px;
+border-radius: 50%;
+border: 1.5px solid var(–lime);
+animation: ripple 2s ease-in-out infinite;
+position: absolute; margin-top: -8px;
+}
+@keyframes ripple {
+0%   { transform: scale(1); opacity: 0.8; }
+100% { transform: scale(2.2); opacity: 0; }
+}
+.mag-status.building { background: var(–gold); animation: blink 1.4s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.mag-status.planned  { background: var(–sub); }
+
+.mag-name { font-weight: 600; font-size: 0.88rem; margin-bottom: 2px; }
+.mag-role { font-size: 0.68rem; color: var(–sub); margin-bottom: 10px; line-height: 1.4; }
+
+.mag-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.mag-bar-fill { height: 100%; border-radius: 2px; transition: width 1.2s ease; }
+
+.mag-port { font-family: var(–mono); font-size: 0.58rem; color: var(–sub); margin-top: 6px; }
+
+/* ==============================
+THREE-COLUMN LAYOUT
+============================== */
+.three-col {
+display: grid;
+grid-template-columns: 1.3fr 1fr;
+gap: 16px;
+margin-bottom: 28px;
+}
+@media (max-width: 900px) { .three-col { grid-template-columns: 1fr; } }
+
+/* ==============================
+PANEL
+============================== */
+.panel {
+background: var(–card);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 14px;
+overflow: hidden;
+}
+
+.panel-head {
+display: flex; align-items: center; justify-content: space-between;
+padding: 12px 18px;
+border-bottom: 1px solid rgba(255,255,255,0.05);
+background: rgba(0,0,0,0.2);
+}
+
+.panel-head-title {
+font-family: var(–mono);
+font-size: 0.65rem;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+color: var(–text);
+}
+
+.panel-badge {
+font-family: var(–mono);
+font-size: 0.55rem;
+padding: 2px 8px;
+border-radius: 100px;
+background: rgba(245,200,66,0.1);
+border: 1px solid rgba(245,200,66,0.25);
+color: var(–gold);
+}
+
+.panel-body { padding: 16px; }
+
+/* ==============================
+PATHWAY SELECTOR
+============================== */
+.pathway-list { display: flex; flex-direction: column; gap: 8px; }
+
+.pathway-item {
+display: flex; align-items: center; gap: 12px;
+background: rgba(0,0,0,0.3);
+border: 1px solid rgba(255,255,255,0.04);
+border-radius: 9px;
+padding: 12px 14px;
+cursor: pointer;
+transition: border-color 0.15s, background 0.15s;
+}
+.pathway-item:hover, .pathway-item.active {
+border-color: rgba(245,200,66,0.3);
+background: rgba(245,200,66,0.04);
+}
+
+.pi-icon  { font-size: 1.1rem; flex-shrink: 0; }
+.pi-info  { flex: 1; }
+.pi-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 2px; }
+.pi-steps { font-family: var(–mono); font-size: 0.6rem; color: var(–sub); }
+.pi-arrow { color: var(–gold); font-size: 0.7rem; opacity: 0; transition: opacity 0.15s; }
+.pathway-item:hover .pi-arrow, .pathway-item.active .pi-arrow { opacity: 1; }
+
+/* ==============================
+PATHWAY RUNNER
+============================== */
+.runner-track {
+display: flex; flex-direction: column; gap: 6px;
+max-height: 280px; overflow-y: auto;
+padding-right: 4px;
+}
+.runner-track::-webkit-scrollbar { width: 3px; }
+.runner-track::-webkit-scrollbar-thumb { background: rgba(245,200,66,0.2); border-radius: 2px; }
+
+.step-row {
+display: flex; align-items: center; gap: 10px;
+background: rgba(0,0,0,0.3);
+border: 1px solid rgba(255,255,255,0.04);
+border-radius: 8px;
+padding: 9px 12px;
+transition: border-color 0.2s;
+animation: stepIn 0.3s ease both;
+}
+@keyframes stepIn {
+from { opacity: 0; transform: translateX(-8px); }
+to   { opacity: 1; transform: translateX(0); }
+}
+.step-row.running  { border-color: rgba(245,200,66,0.4); background: rgba(245,200,66,0.04); }
+.step-row.done     { border-color: rgba(138,237,122,0.25); }
+.step-row.error    { border-color: rgba(255,95,109,0.3); }
+
+.step-indicator {
+width: 22px; height: 22px;
+border-radius: 50%;
+display: grid; place-items: center;
+font-size: 0.65rem;
+font-family: var(–mono);
+flex-shrink: 0;
+}
+.step-indicator.pending  { background: rgba(255,255,255,0.05); color: var(–sub); }
+.step-indicator.running  { background: rgba(245,200,66,0.15); color: var(–gold); animation: blink 1s infinite; }
+.step-indicator.done     { background: rgba(138,237,122,0.15); color: var(–lime); }
+.step-indicator.error    { background: rgba(255,95,109,0.15); color: var(–coral); }
+
+.step-label { font-size: 0.75rem; flex: 1; }
+.step-agent { font-family: var(–mono); font-size: 0.6rem; color: var(–sub); }
+.step-ms    { font-family: var(–mono); font-size: 0.6rem; color: var(–sub); margin-left: auto; }
+
+.runner-controls { display: flex; gap: 8px; margin-top: 12px; }
+
+.btn {
+font-family: var(–mono);
+font-size: 0.65rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 8px 18px;
+border-radius: 7px;
+border: 1px solid;
+cursor: pointer;
+transition: all 0.15s;
+}
+.btn-gold  { color: var(–gold); border-color: rgba(245,200,66,0.4); background: rgba(245,200,66,0.08); }
+.btn-gold:hover { background: var(–gold); color: var(–void); }
+.btn-ghost { color: var(–sub); border-color: rgba(255,255,255,0.1); background: transparent; }
+.btn-ghost:hover { color: var(–text); border-color: rgba(255,255,255,0.2); }
+
+/* ==============================
+TASK SUBMITTER
+============================== */
+.task-form { display: flex; flex-direction: column; gap: 10px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.field label {
+display: block;
+font-family: var(–mono);
+font-size: 0.58rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: var(–sub);
+margin-bottom: 5px;
+}
+
+.field select, .field input, .field textarea {
+width: 100%;
+background: rgba(0,0,0,0.4);
+border: 1px solid rgba(255,255,255,0.08);
+border-radius: 7px;
+padding: 8px 11px;
+color: var(–text);
+font-family: var(–mono);
+font-size: 0.72rem;
+outline: none;
+transition: border-color 0.15s;
+resize: none;
+}
+.field select:focus, .field input:focus, .field textarea:focus {
+border-color: rgba(245,200,66,0.4);
+}
+
+.task-result {
+background: rgba(0,0,0,0.4);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 8px;
+padding: 12px;
+font-family: var(–mono);
+font-size: 0.68rem;
+line-height: 1.8;
+min-height: 80px;
+color: var(–sub);
+display: none;
+}
+.task-result.visible { display: block; }
+.tr-key   { color: var(–gold); }
+.tr-val   { color: var(–teal); }
+.tr-str   { color: var(–lime); }
+
+/* ==============================
+ARCHITECTURE LAYERS
+============================== */
+.arch-layers { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+
+.arch-layer {
+background: var(–card);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 10px;
+overflow: hidden;
+cursor: pointer;
+transition: border-color 0.2s;
+}
+.arch-layer:hover { border-color: rgba(245,200,66,0.25); }
+
+.arch-layer-head {
+display: flex; align-items: center; gap: 12px;
+padding: 10px 16px;
+}
+
+.arch-layer-color {
+width: 4px; height: 36px;
+border-radius: 2px;
+flex-shrink: 0;
+}
+
+.arch-layer-title { font-weight: 600; font-size: 0.82rem; }
+.arch-layer-desc  { font-size: 0.68rem; color: var(–sub); }
+
+.arch-layer-nodes {
+display: flex; flex-wrap: wrap; gap: 6px;
+padding: 0 16px 12px 32px;
+}
+
+.node-chip {
+font-family: var(–mono);
+font-size: 0.6rem;
+padding: 3px 10px;
+border-radius: 100px;
+border: 1px solid rgba(255,255,255,0.08);
+background: rgba(255,255,255,0.03);
+color: var(–sub);
+transition: all 0.15s;
+}
+.node-chip:hover {
+border-color: rgba(245,200,66,0.3);
+color: var(–gold);
+background: rgba(245,200,66,0.05);
+}
+
+/* ==============================
+LIFECYCLE STAGES
+============================== */
+.lifecycle-track {
+display: flex; gap: 0;
+background: var(–card);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 12px;
+overflow: hidden;
+margin-bottom: 28px;
+}
+
+.lc-stage {
+flex: 1;
+padding: 14px 10px;
+text-align: center;
+border-right: 1px solid rgba(255,255,255,0.05);
+cursor: pointer;
+transition: background 0.15s;
+position: relative;
+}
+.lc-stage:last-child { border-right: none; }
+.lc-stage:hover { background: rgba(245,200,66,0.04); }
+.lc-stage.active { background: rgba(245,200,66,0.06); }
+.lc-stage.active::after {
+content: ‘’;
+position: absolute; bottom: 0; left: 0; right: 0;
+height: 2px;
+background: var(–gold);
+}
+
+.lc-num  { font-family: var(–mono); font-size: 0.52rem; color: var(–sub); margin-bottom: 4px; }
+.lc-name { font-size: 0.75rem; font-weight: 600; margin-bottom: 2px; }
+.lc-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+
+/* ==============================
+LIVE AGENT LOG
+============================== */
+.agent-log {
+background: rgba(0,0,0,0.6);
+font-family: var(–mono);
+font-size: 0.68rem;
+line-height: 1.9;
+padding: 14px 16px;
+max-height: 200px;
+overflow-y: auto;
+}
+.agent-log::-webkit-scrollbar { width: 4px; }
+.agent-log::-webkit-scrollbar-thumb { background: rgba(245,200,66,0.2); border-radius: 2px; }
+
+.al-ts  { color: rgba(136,132,168,0.6); margin-right: 8px; user-select: none; }
+.al-ok  { color: var(–lime); }
+.al-info{ color: var(–sky); }
+.al-warn{ color: var(–gold); }
+.al-err { color: var(–coral); }
+.al-dim { color: var(–sub); }
+
+/* ==============================
+FOUR-PERSONA ROW
+============================== */
+.persona-row {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 12px;
+margin-bottom: 28px;
+}
+@media (max-width: 700px) { .persona-row { grid-template-columns: 1fr 1fr; } }
+
+.persona-card {
+background: var(–card);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 12px;
+padding: 18px 16px;
+text-align: center;
+cursor: pointer;
+transition: border-color 0.2s, transform 0.15s;
+}
+.persona-card:hover {
+border-color: rgba(245,200,66,0.3);
+transform: translateY(-2px);
+}
+.persona-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.persona-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+.persona-desc { font-size: 0.68rem; color: var(–sub); line-height: 1.5; }
+
+/* ==============================
+FOOTER
+============================== */
+.footer {
+position: relative; z-index: 10;
+padding: 20px 28px;
+border-top: 1px solid rgba(255,255,255,0.05);
+display: flex; align-items: center; justify-content: space-between;
+font-family: var(–mono);
+font-size: 0.6rem;
+color: var(–sub);
+}
+.footer strong { color: var(–gold); }
+
+:focus-visible { outline: 2px solid var(–gold); outline-offset: 3px; }
+</style>
+
+</head>
+<body>
+
+<!-- TOPBAR -->
+
+<header class="topbar" role="banner">
+  <div class="tb-brand">
+    <div class="brand-icon" aria-hidden="true">✦</div>
+    <div class="brand-name">360 <span>Magicians</span> System</div>
+  </div>
+  <nav class="tb-nav" aria-label="Sections">
+    <button class="tb-nav-btn active" onclick="scrollTo(0,0)">Agents</button>
+    <button class="tb-nav-btn" onclick="document.getElementById('pathways').scrollIntoView({behavior:'smooth'})">Pathways</button>
+    <button class="tb-nav-btn" onclick="document.getElementById('architecture').scrollIntoView({behavior:'smooth'})">Architecture</button>
+    <button class="tb-nav-btn" onclick="document.getElementById('lifecycle').scrollIntoView({behavior:'smooth'})">Lifecycle</button>
+  </nav>
+  <div class="tb-right">
+    <span class="chip chip-teal">Deaf-First</span>
+    <span class="chip chip-gold">Python 3.11+</span>
+    <span class="chip chip-coral" id="system-status">● 5 live</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HERO -->
+
+  <section class="hero" aria-labelledby="main-heading">
+    <div>
+      <div class="hero-eyebrow">Unified Distributed Agent System</div>
+      <h1 class="hero-title" id="main-heading">
+        Seven Magicians.<br>
+        <strong>One Orchestrator.</strong><br>
+        Infinite Pathways.
+      </h1>
+      <p class="hero-sub">A microservices-based, distributed agent platform where specialized AI Magicians operate as independent nodes. Webhook-driven, pathway-routed, containerized — and built from a Deaf-First perspective.</p>
+      <div class="hero-deaf-badge" role="note">
+        <span aria-hidden="true">🤲</span>
+        <span>ASL-Native Design · Visual-First Communication · No Audio Dependency</span>
+      </div>
+    </div>
+    <div class="hero-stats" role="group" aria-label="System statistics">
+      <div class="stat-cell">
+        <div class="stat-label">Magicians</div>
+        <div class="stat-value" style="color:var(--gold)">7</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Pathways</div>
+        <div class="stat-value" style="color:var(--teal)">∞</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Lifecycle Stages</div>
+        <div class="stat-value" style="color:var(--violet)">6</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">API Framework</div>
+        <div class="stat-value" style="color:var(--lime);font-size:1rem;margin-top:4px">FastAPI</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAGICIANS GRID -->
+
+  <div class="sec-header">
+    <div class="sec-title">Magician Nodes</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="magician-grid" id="magician-grid" role="list" aria-label="Magician agent nodes">
+    <!-- injected by JS -->
+  </div>
+
+  <!-- FOUR PERSONAS -->
+
+  <div class="sec-header">
+    <div class="sec-title">User Personas</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="persona-row" role="list" aria-label="User personas">
+    <div class="persona-card" role="listitem" tabindex="0">
+      <div class="persona-icon">💼</div>
+      <div class="persona-name">Business Owner</div>
+      <div class="persona-desc">Formation, strategy, analytics, VR/SBA pathways</div>
+    </div>
+    <div class="persona-card" role="listitem" tabindex="0">
+      <div class="persona-icon">💻</div>
+      <div class="persona-name">Developer</div>
+      <div class="persona-desc">Code gen, ASL accessibility validation, CI/CD</div>
+    </div>
+    <div class="persona-card" role="listitem" tabindex="0">
+      <div class="persona-icon">🔍</div>
+      <div class="persona-name">Job Seeker</div>
+      <div class="persona-desc">Career services, workflow execution, WIOA routing</div>
+    </div>
+    <div class="persona-card" role="listitem" tabindex="0">
+      <div class="persona-icon">🎨</div>
+      <div class="persona-name">Creative</div>
+      <div class="persona-desc">Content creation, design, ideation, DocuHand</div>
+    </div>
+  </div>
+
+  <!-- PATHWAYS + TASK SUBMITTER -->
+
+  <div class="sec-header" id="pathways">
+    <div class="sec-title">Pathway Engine + Task API</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="three-col" style="margin-bottom:28px">
+
+```
+<!-- Pathway runner -->
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-head-title">Pathway Runner</span>
+    <span class="panel-badge" id="pathway-badge">select pathway</span>
+  </div>
+  <div class="panel-body">
+    <div class="pathway-list" role="list" id="pathway-list">
+      <!-- injected -->
+    </div>
+    <div style="margin-top:14px">
+      <div class="sec-header" style="margin-bottom:10px">
+        <div class="sec-title" style="font-size:0.55rem">Execution Steps</div>
+        <div class="sec-line"></div>
+      </div>
+      <div class="runner-track" id="runner-track" role="log" aria-live="polite" aria-label="Pathway execution steps">
+        <div style="font-size:0.72rem;color:var(--sub);padding:8px 0">Select a pathway above to begin execution.</div>
+      </div>
+      <div class="runner-controls">
+        <button class="btn btn-gold" onclick="runPathway()" id="run-btn" aria-label="Execute selected pathway">Run Pathway</button>
+        <button class="btn btn-ghost" onclick="resetRunner()" aria-label="Reset pathway runner">Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task submitter -->
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-head-title">Task API</span>
+    <span class="panel-badge">POST /api/v1/tasks</span>
+  </div>
+  <div class="panel-body">
+    <div class="task-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="task-magician">Magician Type</label>
+          <select id="task-magician">
+            <option value="business">business</option>
+            <option value="developer">developer</option>
+            <option value="creative">creative</option>
+            <option value="job">job</option>
+            <option value="docuhand">docuhand</option>
+            <option value="sync">sync</option>
+            <option value="fibronrose">fibronrose</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="task-action">Action</label>
+          <select id="task-action">
+            <option value="validate-business-idea">validate-business-idea</option>
+            <option value="generate-asl-component">generate-asl-component</option>
+            <option value="create-content">create-content</option>
+            <option value="find-opportunities">find-opportunities</option>
+            <option value="process-document">process-document</option>
+            <option value="sync-data">sync-data</option>
+            <option value="score-trust">score-trust</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="task-payload">Payload (JSON)</label>
+        <textarea id="task-payload" rows="4" spellcheck="false">{
+```
+
+“idea”: “ASL-native customer service platform”,
+“target_market”: “Deaf community businesses”,
+“deaf_first”: true
+}</textarea>
+</div>
+<button class="btn btn-gold" onclick="submitTask()" style="align-self:flex-start" aria-label="Submit task to magician">Submit Task →</button>
+<div class="task-result" id="task-result" role="status" aria-live="polite"></div>
+</div>
+</div>
+</div>
+
+  </div>
+
+  <!-- ARCHITECTURE -->
+
+  <div class="sec-header" id="architecture">
+    <div class="sec-title">Architecture Layers</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="arch-layers" role="list" id="arch-layers" aria-label="Architecture layer overview">
+    <!-- injected -->
+  </div>
+
+  <!-- LIFECYCLE STAGES -->
+
+  <div class="sec-header" id="lifecycle">
+    <div class="sec-title">Magician Lifecycle — 6 Stages</div>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="lifecycle-track" role="tablist" aria-label="Magician lifecycle stages" id="lifecycle-track">
+    <!-- injected -->
+  </div>
+
+  <!-- LIFECYCLE DETAIL -->
+
+  <div class="panel" style="margin-bottom:28px">
+    <div class="panel-head">
+      <span class="panel-head-title" id="lc-detail-title">Stage Detail</span>
+      <span class="panel-badge" id="lc-detail-badge">select a stage</span>
+    </div>
+    <div class="panel-body" id="lc-detail-body" style="font-size:0.8rem;color:var(--sub);line-height:1.7">
+      Click any lifecycle stage above to see details, MBTQ integration points, and pathway triggers.
+    </div>
+  </div>
+
+  <!-- LIVE LOG -->
+
+  <div class="sec-header">
+    <div class="sec-title">Live System Log</div>
+    <div class="sec-line"></div>
+    <span class="panel-badge">● streaming</span>
+  </div>
+
+  <div class="panel" style="margin-bottom:0">
+    <div class="panel-head">
+      <span class="panel-head-title">Orchestrator + Agent Activity</span>
+      <span class="panel-badge">port 8000</span>
+    </div>
+    <div class="agent-log" id="agent-log" role="log" aria-live="polite" aria-label="System activity log" tabindex="0">
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer" role="contentinfo">
+  <span><strong>360 Magicians System</strong> · github.com/360-Magicians/System · Deaf-First · MIT</span>
+  <span>MBTQ.dev Integration · FastAPI · Docker · K8s · PinkFlow CLI</span>
+</footer>
+
+<script>
+// ============================================================
+// MAGICIANS
+// ============================================================
+const magicians = [
+  { name:'Orchestrator', role:'Central coordinator, service discovery, task queue & routing', icon:'🎯', status:'live', port:8000, pct:88, color:'#f5c842', accent:'#f5c842' },
+  { name:'Business',     role:'Formation, strategy, analytics, SBA / VR integration',        icon:'💼', status:'live', port:8001, pct:74, color:'#2cd9c5', accent:'#2cd9c5' },
+  { name:'Developer',    role:'Code gen, ASL-first accessibility validation, CI/CD',          icon:'💻', status:'live', port:8002, pct:61, color:'#6eb5ff', accent:'#6eb5ff' },
+  { name:'Creative',     role:'Content creation, design, ideation pipelines',                 icon:'🎨', status:'live', port:8003, pct:55, color:'#a78bfa', accent:'#a78bfa' },
+  { name:'Job',          role:'Workflow execution, career services, WIOA routing',            icon:'🔍', status:'building', port:8004, pct:30, color:'#e8902a', accent:'#e8902a' },
+  { name:'DocuHand',     role:'Document processing, ASL-annotated doc management',            icon:'📋', status:'building', port:8005, pct:20, color:'#ff8fab', accent:'#ff8fab' },
+  { name:'Sync',         role:'Data synchronization, PinkSync integration layer',             icon:'🔄', status:'planned', port:8006, pct:8,  color:'#8aed7a', accent:'#8aed7a' },
+  { name:'Fibronrose',   role:'Trust scoring, DB operations, Fibronrose 0.382 threshold',     icon:'🌸', status:'planned', port:8007, pct:5,  color:'#f5c842', accent:'#f5c842' },
+];
+
+const grid = document.getElementById('magician-grid');
+grid.innerHTML = magicians.map(m => `
+  <div class="mag-card" role="listitem" tabindex="0" aria-label="${m.name} Magician — ${m.status}" style="--accent:${m.accent}">
+    <div class="mag-top">
+      <div class="mag-avatar" style="background:rgba(255,255,255,0.04)">${m.icon}</div>
+      <div class="mag-status ${m.status}" aria-label="Status: ${m.status}"></div>
+    </div>
+    <div class="mag-name">${m.name} Magician</div>
+    <div class="mag-role">${m.role}</div>
+    <div class="mag-bar">
+      <div class="mag-bar-fill" style="width:${m.pct}%;background:${m.color}"></div>
+    </div>
+    <div class="mag-port">:${m.port} · ${m.status === 'live' ? 'online' : m.status}</div>
+  </div>`).join('');
+
+// ============================================================
+// PATHWAYS
+// ============================================================
+const pathways = [
+  {
+    id:'biz-formation', icon:'🏢', title:'Business Formation',
+    desc:'ASL Deaf entrepreneur → LLC → SBA', steps:6,
+    steps_detail:[
+      { label:'Validate business idea', agent:'Business Magician', ms: 320 },
+      { label:'Check VR/SBA eligibility', agent:'Business Magician', ms: 480 },
+      { label:'Generate formation docs', agent:'DocuHand Magician', ms: 650 },
+      { label:'ASL review & sign', agent:'Developer Magician', ms: 210 },
+      { label:'Sync to PinkSync', agent:'Sync Magician', ms: 140 },
+      { label:'Trust score anchoring', agent:'Fibronrose Magician', ms: 190 },
+    ]
+  },
+  {
+    id:'creative-content', icon:'🎨', title:'Creative Content',
+    desc:'Parallel ideation → design → publish', steps:4,
+    steps_detail:[
+      { label:'Ideation (parallel branches)', agent:'Creative Magician', ms: 560 },
+      { label:'ASL caption generation', agent:'Developer Magician', ms: 320 },
+      { label:'Design visual assets', agent:'Creative Magician', ms: 890 },
+      { label:'Publish with metadata', agent:'DocuHand Magician', ms: 210 },
+    ]
+  },
+  {
+    id:'job-pathway', icon:'🔍', title:'Job Pathway (WIOA)',
+    desc:'Skills assessment → opportunities → apply', steps:5,
+    steps_detail:[
+      { label:'Skills assessment (Deaf-first)', agent:'Job Magician', ms: 440 },
+      { label:'WIOA Title I/IV routing', agent:'Business Magician', ms: 360 },
+      { label:'Match opportunities', agent:'Job Magician', ms: 700 },
+      { label:'Generate ASL cover letter', agent:'Creative Magician', ms: 480 },
+      { label:'Submit application packet', agent:'DocuHand Magician', ms: 230 },
+    ]
+  },
+  {
+    id:'dev-deploy', icon:'🚀', title:'Developer Deploy',
+    desc:'Code gen → a11y validation → PinkFlow', steps:4,
+    steps_detail:[
+      { label:'Generate component code', agent:'Developer Magician', ms: 520 },
+      { label:'ASL-first a11y audit (2s rule)', agent:'Developer Magician', ms: 340 },
+      { label:'PinkFlow buildpack pipeline', agent:'Sync Magician', ms: 1100 },
+      { label:'Deploy to mbtq.dev', agent:'Orchestrator', ms: 280 },
+    ]
+  },
+];
+
+const pathwayList = document.getElementById('pathway-list');
+pathwayList.innerHTML = pathways.map(p => `
+  <div class="pathway-item" role="listitem button" tabindex="0" data-id="${p.id}" onclick="selectPathway('${p.id}',this)" aria-label="${p.title} pathway — ${p.steps} steps">
+    <span class="pi-icon">${p.icon}</span>
+    <div class="pi-info">
+      <div class="pi-title">${p.title}</div>
+      <div class="pi-steps">${p.steps} steps · ${p.desc}</div>
+    </div>
+    <span class="pi-arrow">▶</span>
+  </div>`).join('');
+
+let selectedPathway = null;
+let runnerInterval = null;
+
+function selectPathway(id, el) {
+  document.querySelectorAll('.pathway-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  selectedPathway = pathways.find(p => p.id === id);
+  document.getElementById('pathway-badge').textContent = selectedPathway.title;
+  renderRunnerSteps('pending');
+}
+
+function renderRunnerSteps(state) {
+  if (!selectedPathway) return;
+  const track = document.getElementById('runner-track');
+  track.innerHTML = selectedPathway.steps_detail.map((s,i) => `
+    <div class="step-row" id="step-${i}" role="listitem">
+      <div class="step-indicator ${state}" id="si-${i}">${i+1}</div>
+      <div>
+        <div class="step-label">${s.label}</div>
+        <div class="step-agent">${s.agent}</div>
+      </div>
+      <div class="step-ms" id="ms-${i}" aria-label="Duration"></div>
+    </div>`).join('');
+}
+
+function runPathway() {
+  if (!selectedPathway) { alert('Select a pathway first.'); return; }
+  if (runnerInterval) clearTimeout(runnerInterval);
+  renderRunnerSteps('pending');
+  let idx = 0;
+
+  function runStep() {
+    if (idx >= selectedPathway.steps_detail.length) return;
+    const s = selectedPathway.steps_detail[idx];
+    const row = document.getElementById(`step-${idx}`);
+    const si  = document.getElementById(`si-${idx}`);
+    const ms  = document.getElementById(`ms-${idx}`);
+
+    row.classList.add('running');
+    si.className = 'step-indicator running';
+    si.textContent = idx+1;
+
+    runnerInterval = setTimeout(() => {
+      row.classList.remove('running');
+      row.classList.add('done');
+      si.className = 'step-indicator done';
+      si.textContent = '✓';
+      ms.textContent = `${s.ms}ms`;
+      idx++;
+      runStep();
+    }, s.ms * 0.9);
+  }
+  runStep();
+}
+
+function resetRunner() {
+  if (runnerInterval) clearTimeout(runnerInterval);
+  if (selectedPathway) renderRunnerSteps('pending');
+}
+
+// ============================================================
+// TASK SUBMITTER
+// ============================================================
+function submitTask() {
+  const magician = document.getElementById('task-magician').value;
+  const action   = document.getElementById('task-action').value;
+  let payload;
+  try { payload = JSON.parse(document.getElementById('task-payload').value); }
+  catch(e) { payload = { raw: document.getElementById('task-payload').value }; }
+
+  const resultEl = document.getElementById('task-result');
+  resultEl.innerHTML = '<span style="color:var(--gold)">⏳ Routing to orchestrator...</span>';
+  resultEl.classList.add('visible');
+
+  setTimeout(() => {
+    const taskId = 'task_' + Math.random().toString(36).slice(2,10);
+    resultEl.innerHTML = `
+<span class="tr-key">task_id:</span>  <span class="tr-str">"${taskId}"</span>
+<span class="tr-key">magician:</span> <span class="tr-val">"${magician}"</span>
+<span class="tr-key">action:</span>   <span class="tr-val">"${action}"</span>
+<span class="tr-key">status:</span>   <span class="al-ok">"accepted"</span>
+<span class="tr-key">port:</span>     <span class="tr-str">${8000 + magicians.findIndex(m=>m.name.toLowerCase()===magician)+1}</span>
+<span class="tr-key">deaf_first:</span> <span class="al-ok">true</span>
+<span class="tr-key">result:</span>   <span class="al-ok">✓ processed in ${(Math.random()*400+180).toFixed(0)}ms</span>`;
+  }, 900);
+}
+
+// ============================================================
+// ARCHITECTURE LAYERS
+// ============================================================
+const archLayers = [
+  { color:'#6eb5ff', title:'User Interaction Layer',        desc:'Web & mobile frontends · ASL-native interfaces',      nodes:['ui-web-mobile','asl-overlay','visual-alerts','caption-engine'] },
+  { color:'#f5c842', title:'Core Services & Gateways',      desc:'DeafAuth · PinkSync · FibronRose · @mbtq/gateway',    nodes:['DeafAuth (PASETO v4)','PinkSync :3003','FibronRose :3004','@mbtq/gateway','a11y :3005'] },
+  { color:'#a78bfa', title:'Microservice APIs',             desc:'Domain gateways for each Magician persona',           nodes:['Business API :8001','Developer API :8002','Creative API :8003','Job API :8004','DocuHand API :8005'] },
+  { color:'#2cd9c5', title:'AI Magician Agents',            desc:'Specialized goal-oriented AI agents',                 nodes:['IdeaMagician','BuilderMagician','FundingMagician','CreativeMagician','PathwayEngine','Orchestrator'] },
+  { color:'#ff8fab', title:'Data & Intelligence Layer',     desc:'Persistence, messaging, analytics',                   nodes:['Supabase (auth/RLS)','Neon.tech (Fibronrose)','Deno KV','Redis Streams','Upstash cache','BigQuery'] },
+  { color:'#8aed7a', title:'Infrastructure & Observability', desc:'Hosting, monitoring, CI/CD',                         nodes:['Vertex AI / Ollama','GitHub Actions','Prometheus','Grafana','Docker / K8s','PinkFlow CLI'] },
+];
+
+const archEl = document.getElementById('arch-layers');
+archEl.innerHTML = archLayers.map(l => `
+  <div class="arch-layer" role="listitem" tabindex="0" aria-label="${l.title}">
+    <div class="arch-layer-head">
+      <div class="arch-layer-color" style="background:${l.color}"></div>
+      <div>
+        <div class="arch-layer-title">${l.title}</div>
+        <div class="arch-layer-desc">${l.desc}</div>
+      </div>
+    </div>
+    <div class="arch-layer-nodes">
+      ${l.nodes.map(n => `<span class="node-chip" tabindex="0">${n}</span>`).join('')}
+    </div>
+  </div>`).join('');
+
+// ============================================================
+// LIFECYCLE
+// ============================================================
+const stages = [
+  { icon:'💡', name:'Idea',     num:'01', detail:'Initial concept validation. Business Magician runs idea scoring against VR/SBA criteria. ASL-first brief generated. Fibronrose initializes trust record at 0.382 baseline.', badge:'discovery' },
+  { icon:'📝', name:'Proposal', num:'02', detail:'DocuHand Magician assembles proposal packet. ASL video summary auto-captioned. DeafAUTH tier verified. Pathway locked to WIOA/SBA route if applicable.', badge:'documentation' },
+  { icon:'🔨', name:'Build',    num:'03', detail:'Developer Magician scaffolds code. PinkFlow CLI provisions infrastructure. FibronRose trust score gates each deployment step. 2-second rule enforced on all UI components.', badge:'development' },
+  { icon:'📈', name:'Grow',     num:'04', detail:'Creative Magician activates content pipelines. Job Magician surfaces opportunities. Sync Magician bridges PinkSync ↔ external APIs. Analytics stream to BigQuery.', badge:'growth' },
+  { icon:'⚙️', name:'Managed',  num:'05', detail:'Full observability via Prometheus + Grafana. Orchestrator runs health checks on all 7 nodes. Fibronrose continuously re-scores. PASETO tokens rotate via DeafAUTH.', badge:'operations' },
+  { icon:'🌅', name:'Sunset',   num:'06', detail:'Graceful decommission pathway. DocuHand archives all artefacts. Trust badges written to chain as permanent record. DAO governance vote may revive or archive permanently.', badge:'archival' },
+];
+
+const lcTrack = document.getElementById('lifecycle-track');
+lcTrack.innerHTML = stages.map((s,i) => `
+  <div class="lc-stage" role="tab" tabindex="0" aria-selected="false" aria-controls="lc-detail-body" onclick="selectStage(${i},this)" onkeydown="if(event.key==='Enter'||event.key===' ')selectStage(${i},this)">
+    <div class="lc-icon">${s.icon}</div>
+    <div class="lc-num">${s.num}</div>
+    <div class="lc-name">${s.name}</div>
+  </div>`).join('');
+
+function selectStage(i, el) {
+  document.querySelectorAll('.lc-stage').forEach(s => { s.classList.remove('active'); s.setAttribute('aria-selected','false'); });
+  el.classList.add('active'); el.setAttribute('aria-selected','true');
+  const s = stages[i];
+  document.getElementById('lc-detail-title').textContent = `Stage ${s.num}: ${s.name}`;
+  document.getElementById('lc-detail-badge').textContent = s.badge;
+  document.getElementById('lc-detail-body').innerHTML = `<p style="color:var(--text)">${s.detail}</p>`;
+}
+
+// ============================================================
+// LIVE AGENT LOG
+// ============================================================
+const logLines = [
+  { cls:'al-info', msg:'orchestrator: health check → all 4 live nodes responding' },
+  { cls:'al-ok',   msg:'business-magician: task accepted — validate-business-idea (ASL platform)' },
+  { cls:'al-ok',   msg:'business-magician: Fibronrose score 0.91 — routing to SBA pathway' },
+  { cls:'al-info', msg:'pathway-engine: executing business-formation (step 1/6)' },
+  { cls:'al-ok',   msg:'developer-magician: ASL-first audit passed — 2-second rule ✓' },
+  { cls:'al-info', msg:'docuhand-magician: generating formation packet with ASL annotations' },
+  { cls:'al-ok',   msg:'sync-magician: PinkSync ↔ api.pinksync.io sync complete (14ms)' },
+  { cls:'al-warn', msg:'job-magician: node building — queue held, will retry in 30s' },
+  { cls:'al-info', msg:'orchestrator: creative-magician task — content pipeline triggered' },
+  { cls:'al-ok',   msg:'creative-magician: parallel ideation branches completed (3 variants)' },
+  { cls:'al-info', msg:'deafauth: PASETO v4 token issued — tier 1 user #4412' },
+  { cls:'al-ok',   msg:'fibronrose: trust score recalculated — 38 accounts updated' },
+  { cls:'al-info', msg:'pathway-engine: business-formation step 4/6 — ASL review pending' },
+  { cls:'al-ok',   msg:'orchestrator: all webhooks nominal — CloudEvents dispatched' },
+  { cls:'al-info', msg:'pinkflow-cli: buildpack pipeline triggered for developer-magician deploy' },
+  { cls:'al-ok',   msg:'orchestrator: task_a4f9c3 completed — 342ms total latency' },
+  { cls:'al-info', msg:'prometheus: scraping metrics — all pods healthy' },
+  { cls:'al-dim',  msg:'event-bus: pub/sub message dispatched to creative + sync magicians' },
+];
+
+let logIdx = 0;
+const logEl = document.getElementById('agent-log');
+
+function appendLog() {
+  const l = logLines[logIdx % logLines.length]; logIdx++;
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  const line = document.createElement('div');
+  line.innerHTML = `<span class="al-ts">${ts}</span><span class="${l.cls}">${l.msg}</span>`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+  if (logEl.children.length > 28) logEl.removeChild(logEl.firstChild);
+}
+
+for (let i=0;i<10;i++) appendLog();
+setInterval(appendLog, 2400);
+
+// Keyboard nav for lifecycle stages
+document.querySelectorAll('.lc-stage').forEach((s, i, arr) => {
+  s.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') arr[Math.min(i+1,arr.length-1)].focus();
+    if (e.key === 'ArrowLeft')  arr[Math.max(i-1,0)].focus();
+  });
+});
+</script>
+
+</body>
+</html>
