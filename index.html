@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PinkFlow — Rust/Cargo Buildpack Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0a0812;
+  --paper:  #0f0d1a;
+  --panel:  #161224;
+  --border: rgba(255,110,60,0.15);
+  --rust:   #e8541a;
+  --amber:  #f5a623;
+  --lime:   #a8e063;
+  --ice:    #7edcf5;
+  --violet: #9b59ff;
+  --pink:   #ff2d78;
+  --muted:  #5a5070;
+  --text:   #e8e0f4;
+  --mono:   'IBM Plex Mono', monospace;
+  --display:'Bebas Neue', sans-serif;
+  --body:   'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+font-family: var(–body);
+background: var(–ink);
+color: var(–text);
+min-height: 100vh;
+overflow-x: hidden;
+}
+
+/* Scanline texture */
+body::before {
+content: ‘’;
+position: fixed; inset: 0;
+background: repeating-linear-gradient(
+0deg,
+transparent,
+transparent 2px,
+rgba(0,0,0,0.08) 2px,
+rgba(0,0,0,0.08) 4px
+);
+pointer-events: none; z-index: 0;
+}
+
+/* Grid overlay */
+body::after {
+content: ‘’;
+position: fixed; inset: 0;
+background-image:
+linear-gradient(rgba(232,84,26,0.03) 1px, transparent 1px),
+linear-gradient(90deg, rgba(232,84,26,0.03) 1px, transparent 1px);
+background-size: 40px 40px;
+pointer-events: none; z-index: 0;
+}
+
+/* ==============================
+TOPBAR
+============================== */
+.topbar {
+position: sticky; top: 0; z-index: 200;
+height: 52px;
+display: flex; align-items: center; justify-content: space-between;
+padding: 0 24px;
+background: rgba(10,8,18,0.92);
+backdrop-filter: blur(20px);
+border-bottom: 1px solid var(–border);
+}
+
+.tb-left { display: flex; align-items: center; gap: 14px; }
+
+.tb-logo {
+font-family: var(–display);
+font-size: 1.3rem;
+letter-spacing: 0.06em;
+color: var(–rust);
+line-height: 1;
+}
+
+.tb-slash { color: var(–muted); }
+
+.tb-title {
+font-family: var(–mono);
+font-size: 0.7rem;
+color: var(–muted);
+letter-spacing: 0.12em;
+text-transform: uppercase;
+}
+
+.tb-right { display: flex; align-items: center; gap: 10px; }
+
+.pill {
+font-family: var(–mono);
+font-size: 0.6rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+padding: 3px 10px;
+border-radius: 100px;
+border: 1px solid;
+}
+.pill-rust  { color: var(–rust);   border-color: rgba(232,84,26,0.35);  background: rgba(232,84,26,0.08);  }
+.pill-lime  { color: var(–lime);   border-color: rgba(168,224,99,0.35); background: rgba(168,224,99,0.08); }
+.pill-ice   { color: var(–ice);    border-color: rgba(126,220,245,0.3); background: rgba(126,220,245,0.08);}
+.pill-violet{ color: var(–violet); border-color: rgba(155,89,255,0.3);  background: rgba(155,89,255,0.08); }
+
+/* ==============================
+LAYOUT
+============================== */
+.main { position: relative; z-index: 10; padding: 24px; max-width: 1280px; margin: 0 auto; }
+
+/* ==============================
+PAGE HEADER
+============================== */
+.page-header {
+display: grid;
+grid-template-columns: 1fr auto;
+align-items: end;
+gap: 24px;
+margin-bottom: 32px;
+padding-bottom: 24px;
+border-bottom: 1px solid var(–border);
+}
+
+.ph-eyebrow {
+font-family: var(–mono);
+font-size: 0.62rem;
+letter-spacing: 0.18em;
+text-transform: uppercase;
+color: var(–rust);
+margin-bottom: 6px;
+display: flex; align-items: center; gap: 8px;
+}
+.ph-eyebrow span { width: 24px; height: 1px; background: var(–rust); display: inline-block; }
+
+.ph-title {
+font-family: var(–display);
+font-size: clamp(2.2rem, 5vw, 3.6rem);
+line-height: 0.95;
+letter-spacing: 0.03em;
+}
+.ph-title em { color: var(–rust); font-style: normal; }
+
+.ph-sub {
+font-size: 0.8rem;
+color: var(–muted);
+margin-top: 8px;
+line-height: 1.6;
+max-width: 480px;
+}
+
+.ph-meta {
+text-align: right;
+font-family: var(–mono);
+font-size: 0.65rem;
+color: var(–muted);
+line-height: 2;
+}
+.ph-meta strong { color: var(–amber); }
+
+/* ==============================
+BILATERAL FLOW — CENTER PIECE
+============================== */
+.bilateral-wrap {
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 14px;
+padding: 24px;
+margin-bottom: 24px;
+overflow-x: auto;
+}
+
+.bilateral-label {
+font-family: var(–mono);
+font-size: 0.6rem;
+letter-spacing: 0.14em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 16px;
+display: flex; align-items: center; gap: 8px;
+}
+.bilateral-label::before,
+.bilateral-label::after {
+content: ‘’; flex: 1; height: 1px; background: var(–border);
+}
+
+.flow-track {
+display: flex;
+align-items: center;
+gap: 0;
+min-width: 700px;
+}
+
+/* Phase nodes */
+.phase-node {
+flex-shrink: 0;
+width: 110px;
+background: rgba(255,255,255,0.03);
+border: 1px solid var(–border);
+border-radius: 10px;
+padding: 12px 10px;
+text-align: center;
+cursor: pointer;
+transition: border-color 0.2s, background 0.2s, transform 0.15s;
+position: relative;
+}
+.phase-node:hover, .phase-node.active {
+border-color: var(–rust);
+background: rgba(232,84,26,0.08);
+transform: translateY(-2px);
+}
+.phase-node.active::after {
+content: ‘’;
+position: absolute; bottom: -9px; left: 50%;
+transform: translateX(-50%);
+width: 0; height: 0;
+border-left: 7px solid transparent;
+border-right: 7px solid transparent;
+border-top: 8px solid var(–rust);
+}
+
+.pn-icon { font-size: 1.3rem; margin-bottom: 6px; display: block; }
+.pn-num  { font-family: var(–mono); font-size: 0.55rem; color: var(–muted); margin-bottom: 2px; letter-spacing: 0.1em; }
+.pn-name { font-family: var(–mono); font-size: 0.68rem; font-weight: 600; color: var(–text); }
+.pn-tag  { font-size: 0.55rem; color: var(–muted); margin-top: 4px; }
+
+/* Arrows between phases */
+.flow-arrow {
+flex: 1;
+min-width: 28px;
+position: relative;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 2px;
+}
+
+.arrow-fwd, .arrow-rev {
+width: 100%;
+height: 2px;
+position: relative;
+display: flex;
+align-items: center;
+}
+
+.arrow-fwd { background: linear-gradient(90deg, var(–rust), var(–amber)); border-radius: 1px; }
+.arrow-rev { background: linear-gradient(90deg, var(–violet), var(–ice)); border-radius: 1px; opacity: 0.5; }
+
+.arrow-fwd::after {
+content: ‘▶’;
+position: absolute; right: -6px;
+color: var(–amber);
+font-size: 0.5rem;
+line-height: 1;
+}
+.arrow-rev::before {
+content: ‘◀’;
+position: absolute; left: -6px;
+color: var(–violet);
+font-size: 0.5rem;
+line-height: 1;
+}
+
+.arrow-label {
+font-family: var(–mono);
+font-size: 0.5rem;
+color: var(–muted);
+white-space: nowrap;
+margin-top: 2px;
+}
+
+/* ==============================
+PHASE DETAIL PANEL
+============================== */
+.phase-detail {
+background: rgba(232,84,26,0.04);
+border: 1px solid rgba(232,84,26,0.2);
+border-radius: 10px;
+padding: 20px;
+margin-bottom: 24px;
+display: none;
+animation: slideDown 0.25s ease;
+}
+.phase-detail.visible { display: block; }
+
+@keyframes slideDown {
+from { opacity: 0; transform: translateY(-8px); }
+to   { opacity: 1; transform: translateY(0); }
+}
+
+.pd-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.pd-icon   { font-size: 1.6rem; }
+.pd-title  { font-family: var(–display); font-size: 1.4rem; letter-spacing: 0.04em; }
+.pd-spec   { font-family: var(–mono); font-size: 0.6rem; color: var(–muted); margin-top: 2px; }
+
+.pd-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.pd-block  {
+background: rgba(0,0,0,0.3);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 14px;
+}
+.pd-block-title {
+font-family: var(–mono);
+font-size: 0.6rem;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 10px;
+padding-bottom: 6px;
+border-bottom: 1px solid var(–border);
+}
+
+.env-var {
+display: flex; gap: 8px; align-items: baseline;
+font-family: var(–mono); font-size: 0.68rem;
+margin-bottom: 6px;
+}
+.env-key   { color: var(–amber); flex-shrink: 0; }
+.env-val   { color: var(–ice);   word-break: break-all; }
+.env-attr  { color: var(–muted); font-size: 0.58rem; }
+
+/* ==============================
+TWO-COLUMN: CONFIG + TOML
+============================== */
+.twin-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 16px;
+margin-bottom: 24px;
+}
+@media (max-width: 768px) { .twin-grid { grid-template-columns: 1fr; } }
+
+.block {
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 12px;
+overflow: hidden;
+}
+
+.block-header {
+display: flex; align-items: center; justify-content: space-between;
+padding: 12px 16px;
+border-bottom: 1px solid var(–border);
+background: rgba(0,0,0,0.2);
+}
+
+.block-title {
+font-family: var(–mono);
+font-size: 0.65rem;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+color: var(–text);
+}
+
+.block-badge {
+font-family: var(–mono);
+font-size: 0.55rem;
+padding: 2px 8px;
+border-radius: 100px;
+background: rgba(232,84,26,0.12);
+border: 1px solid rgba(232,84,26,0.3);
+color: var(–rust);
+}
+
+.block-body { padding: 16px; }
+
+/* ==============================
+CODE BLOCK
+============================== */
+.code-scroll {
+background: rgba(0,0,0,0.5);
+border: 1px solid rgba(255,255,255,0.05);
+border-radius: 8px;
+padding: 14px;
+overflow-x: auto;
+overflow-y: auto;
+max-height: 320px;
+font-family: var(–mono);
+font-size: 0.7rem;
+line-height: 1.8;
+}
+
+.code-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.code-scroll::-webkit-scrollbar-thumb { background: rgba(232,84,26,0.3); border-radius: 2px; }
+
+.tok-comment { color: #4a4060; }
+.tok-key     { color: var(–amber); }
+.tok-val     { color: var(–lime); }
+.tok-str     { color: var(–ice); }
+.tok-section { color: var(–rust); font-weight: 600; }
+.tok-kw      { color: var(–violet); }
+.tok-num     { color: var(–amber); }
+
+/* ==============================
+LAYER TYPE TABLE
+============================== */
+.layer-table {
+width: 100%;
+border-collapse: collapse;
+font-family: var(–mono);
+font-size: 0.68rem;
+}
+.layer-table th {
+text-align: left;
+padding: 6px 10px;
+color: var(–muted);
+font-size: 0.58rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+border-bottom: 1px solid var(–border);
+}
+.layer-table td {
+padding: 7px 10px;
+border-bottom: 1px solid rgba(255,255,255,0.03);
+vertical-align: middle;
+}
+.layer-table tr:last-child td { border-bottom: none; }
+.layer-table tr:hover td { background: rgba(232,84,26,0.04); }
+
+.bool-t { color: var(–lime); }
+.bool-f { color: var(–muted); }
+.restored-y { color: var(–lime); }
+.restored-n { color: var(–muted); }
+
+/* ==============================
+FORM: EXEC ENV SELECTOR
+============================== */
+.env-selector {
+display: flex; gap: 8px; flex-wrap: wrap;
+margin-bottom: 14px;
+}
+.env-btn {
+font-family: var(–mono);
+font-size: 0.65rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+padding: 6px 14px;
+border-radius: 6px;
+border: 1px solid var(–border);
+background: transparent;
+color: var(–muted);
+cursor: pointer;
+transition: all 0.15s;
+}
+.env-btn:hover { color: var(–text); border-color: rgba(232,84,26,0.4); }
+.env-btn.active {
+background: rgba(232,84,26,0.15);
+border-color: var(–rust);
+color: var(–rust);
+}
+
+.env-note {
+font-family: var(–mono);
+font-size: 0.65rem;
+color: var(–muted);
+background: rgba(0,0,0,0.3);
+border-left: 2px solid var(–rust);
+padding: 8px 12px;
+border-radius: 0 6px 6px 0;
+line-height: 1.6;
+margin-top: 8px;
+}
+.env-note strong { color: var(–amber); }
+
+/* ==============================
+SBOM FORMATS
+============================== */
+.sbom-list { display: flex; flex-direction: column; gap: 8px; }
+.sbom-row  {
+display: flex; align-items: center; justify-content: space-between;
+background: rgba(0,0,0,0.3);
+border: 1px solid var(–border);
+border-radius: 6px;
+padding: 9px 12px;
+}
+.sbom-type { font-family: var(–mono); font-size: 0.68rem; color: var(–ice); }
+.sbom-ext  { font-family: var(–mono); font-size: 0.65rem; color: var(–amber); }
+
+/* ==============================
+BILATERAL STATUS BAR
+============================== */
+.status-bar {
+display: flex; align-items: center; gap: 0;
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 10px;
+overflow: hidden;
+margin-bottom: 24px;
+}
+
+.sb-segment {
+flex: 1;
+padding: 10px 16px;
+text-align: center;
+border-right: 1px solid var(–border);
+transition: background 0.2s;
+}
+.sb-segment:last-child { border-right: none; }
+.sb-segment:hover { background: rgba(232,84,26,0.04); }
+
+.sb-label {
+font-family: var(–mono);
+font-size: 0.55rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 3px;
+}
+
+.sb-value {
+font-family: var(–display);
+font-size: 1.1rem;
+letter-spacing: 0.04em;
+line-height: 1;
+}
+
+.sb-sub {
+font-family: var(–mono);
+font-size: 0.55rem;
+color: var(–muted);
+margin-top: 2px;
+}
+
+/* ==============================
+FULL-WIDTH BLOCK
+============================== */
+.full-block {
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 12px;
+overflow: hidden;
+margin-bottom: 24px;
+}
+
+/* ==============================
+LIVE CARGO LOG
+============================== */
+.cargo-log {
+background: rgba(0,0,0,0.6);
+padding: 14px 16px;
+font-family: var(–mono);
+font-size: 0.68rem;
+line-height: 1.9;
+max-height: 200px;
+overflow-y: auto;
+}
+.cargo-log::-webkit-scrollbar { width: 4px; }
+.cargo-log::-webkit-scrollbar-thumb { background: rgba(232,84,26,0.3); border-radius: 2px; }
+
+.log-ok   { color: var(–lime); }
+.log-info { color: var(–ice); }
+.log-warn { color: var(–amber); }
+.log-err  { color: var(–pink); }
+.log-dim  { color: var(–muted); }
+.log-ts   { color: rgba(90,80,112,0.8); margin-right: 8px; user-select: none; }
+
+/* ==============================
+FOOTER
+============================== */
+.footer {
+position: relative; z-index: 10;
+padding: 20px 24px;
+border-top: 1px solid var(–border);
+display: flex; align-items: center; justify-content: space-between;
+font-family: var(–mono);
+font-size: 0.6rem;
+color: var(–muted);
+}
+.footer strong { color: var(–rust); }
+
+:focus-visible { outline: 2px solid var(–rust); outline-offset: 3px; }
+</style>
+
+</head>
+<body>
+
+<!-- TOPBAR -->
+
+<header class="topbar" role="banner">
+  <div class="tb-left">
+    <div class="tb-logo">PINKFLOW</div>
+    <div class="tb-slash">/</div>
+    <div class="tb-title">Rust · Cargo · CNB API 0.12</div>
+  </div>
+  <div class="tb-right">
+    <span class="pill pill-rust">mbtq.dev</span>
+    <span class="pill pill-lime" id="env-indicator">production</span>
+    <span class="pill pill-ice">bilateral</span>
+    <span class="pill pill-violet">port 3008</span>
+  </div>
+</header>
+
+<main class="main" role="main">
+
+  <!-- PAGE HEADER -->
+
+  <div class="page-header">
+    <div>
+      <div class="ph-eyebrow"><span></span>Accessible Build Pipeline</div>
+      <h1 class="ph-title">RUST<br><em>CARGO</em><br>BUILDPACK</h1>
+      <p class="ph-sub">Bilateral lifecycle integration — PinkFlow as both a CNB consumer and a buildpack provider. Detection, build, and export flow through the MBTQ gateway. Your pipeline, your layers.</p>
+    </div>
+    <div class="ph-meta" role="contentinfo">
+      <div>API <strong>0.12</strong></div>
+      <div>Cargo <strong>1.78+</strong></div>
+      <div>Target <strong>x86_64-linux</strong></div>
+      <div>Port <strong>3008</strong></div>
+      <div>Auth <strong>DeafAUTH</strong></div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+
+  <div class="status-bar" role="group" aria-label="Pipeline status">
+    <div class="sb-segment">
+      <div class="sb-label">Build Phase</div>
+      <div class="sb-value" style="color:var(--lime)">READY</div>
+      <div class="sb-sub">last: 42s ago</div>
+    </div>
+    <div class="sb-segment">
+      <div class="sb-label">Cached Layers</div>
+      <div class="sb-value" style="color:var(--amber)">6</div>
+      <div class="sb-sub">3.2 GB restored</div>
+    </div>
+    <div class="sb-segment">
+      <div class="sb-label">SBOM</div>
+      <div class="sb-value" style="color:var(--ice)">cdx.json</div>
+      <div class="sb-sub">spdx.json + syft.json</div>
+    </div>
+    <div class="sb-segment">
+      <div class="sb-label">Trust Score</div>
+      <div class="sb-value" style="color:var(--violet)">0.91</div>
+      <div class="sb-sub">Fibronrose anchored</div>
+    </div>
+    <div class="sb-segment">
+      <div class="sb-label">Exec Env</div>
+      <div class="sb-value" style="color:var(--rust)" id="env-value-display">production</div>
+      <div class="sb-sub">CNB_EXEC_ENV</div>
+    </div>
+  </div>
+
+  <!-- BILATERAL FLOW -->
+
+  <div class="bilateral-wrap" role="region" aria-label="Buildpack lifecycle pipeline">
+    <div class="bilateral-label">Lifecycle Pipeline — click phase to inspect</div>
+    <div class="flow-track" role="list">
+
+```
+  <div class="phase-node active" role="listitem button" tabindex="0" data-phase="detect" onclick="selectPhase(this,'detect')" aria-label="Phase 1: Detection">
+    <span class="pn-icon">🔍</span>
+    <div class="pn-num">Phase 1</div>
+    <div class="pn-name">Detect</div>
+    <div class="pn-tag">/bin/detect</div>
+  </div>
+
+  <div class="flow-arrow" aria-hidden="true">
+    <div class="arrow-fwd"></div>
+    <div class="arrow-rev"></div>
+    <div class="arrow-label">build plan</div>
+  </div>
+
+  <div class="phase-node" role="listitem button" tabindex="0" data-phase="analysis" onclick="selectPhase(this,'analysis')" aria-label="Phase 2: Analysis">
+    <span class="pn-icon">📂</span>
+    <div class="pn-num">Phase 2</div>
+    <div class="pn-name">Analysis</div>
+    <div class="pn-tag">layer restore</div>
+  </div>
+
+  <div class="flow-arrow" aria-hidden="true">
+    <div class="arrow-fwd"></div>
+    <div class="arrow-rev"></div>
+    <div class="arrow-label">layer.toml</div>
+  </div>
+
+  <div class="phase-node" role="listitem button" tabindex="0" data-phase="build" onclick="selectPhase(this,'build')" aria-label="Phase 5: Build">
+    <span class="pn-icon">⚙️</span>
+    <div class="pn-num">Phase 5</div>
+    <div class="pn-name">Build</div>
+    <div class="pn-tag">cargo build</div>
+  </div>
+
+  <div class="flow-arrow" aria-hidden="true">
+    <div class="arrow-fwd"></div>
+    <div class="arrow-rev"></div>
+    <div class="arrow-label">layers + SBOM</div>
+  </div>
+
+  <div class="phase-node" role="listitem button" tabindex="0" data-phase="export" onclick="selectPhase(this,'export')" aria-label="Phase 6: Export">
+    <span class="pn-icon">📦</span>
+    <div class="pn-num">Phase 6</div>
+    <div class="pn-name">Export</div>
+    <div class="pn-tag">OCI image</div>
+  </div>
+
+  <div class="flow-arrow" aria-hidden="true">
+    <div class="arrow-fwd"></div>
+    <div class="arrow-rev"></div>
+    <div class="arrow-label">exec.d inject</div>
+  </div>
+
+  <div class="phase-node" role="listitem button" tabindex="0" data-phase="launch" onclick="selectPhase(this,'launch')" aria-label="Launch">
+    <span class="pn-icon">🚀</span>
+    <div class="pn-num">Launch</div>
+    <div class="pn-name">Runtime</div>
+    <div class="pn-tag">exec.d / env</div>
+  </div>
+
+</div>
+```
+
+  </div>
+
+  <!-- PHASE DETAIL -->
+
+  <div class="phase-detail visible" id="phase-detail" role="region" aria-live="polite" aria-label="Phase details">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- TWIN GRID: buildpack.toml + exec env selector -->
+
+  <div class="twin-grid">
+
+```
+<!-- buildpack.toml -->
+<div class="block">
+  <div class="block-header">
+    <span class="block-title">buildpack.toml</span>
+    <span class="block-badge">mbtq.pinkflow.rust</span>
+  </div>
+  <div class="block-body">
+    <div class="code-scroll" role="region" aria-label="buildpack.toml configuration" tabindex="0">
+```
+
+<span class="tok-comment"># PinkFlow Rust/Cargo Buildpack — API 0.12</span>
+<span class="tok-comment"># mbtq.dev · port 3008 · Deaf-first</span>
+
+<span class="tok-key">api</span> = <span class="tok-str">“0.12”</span>
+
+<span class="tok-section">[buildpack]</span>
+<span class="tok-key">id</span>          = <span class="tok-str">“mbtq.pinkflow.rust”</span>
+<span class="tok-key">name</span>        = <span class="tok-str">“PinkFlow Rust/Cargo Buildpack”</span>
+<span class="tok-key">version</span>     = <span class="tok-str">“1.0.0”</span>
+<span class="tok-key">homepage</span>    = <span class="tok-str">“https://pinkflow.mbtq.dev”</span>
+<span class="tok-key">clear-env</span>   = <span class="tok-kw">false</span>
+<span class="tok-key">description</span> = <span class="tok-str">“Bilateral Rust/Cargo build pipeline for MBTQ”</span>
+<span class="tok-key">keywords</span>    = [<span class="tok-str">“rust”</span>, <span class="tok-str">“cargo”</span>, <span class="tok-str">“mbtq”</span>, <span class="tok-str">“deaf-first”</span>]
+<span class="tok-key">sbom-formats</span> = [
+<span class="tok-str">“application/vnd.cyclonedx+json”</span>,
+<span class="tok-str">“application/spdx+json”</span>,
+<span class="tok-str">“application/vnd.syft+json”</span>
+]
+
+<span class="tok-comment"># Supported execution environments</span>
+<span class="tok-section">[[buildpack.exec-env]]</span>
+<span class="tok-key">name</span> = <span class="tok-str">“production”</span>
+
+<span class="tok-section">[[buildpack.exec-env]]</span>
+<span class="tok-key">name</span> = <span class="tok-str">“development”</span>
+
+<span class="tok-section">[[buildpack.exec-env]]</span>
+<span class="tok-key">name</span> = <span class="tok-str">“test”</span>
+
+<span class="tok-comment"># License</span>
+<span class="tok-section">[[buildpack.licenses]]</span>
+<span class="tok-key">type</span> = <span class="tok-str">“MIT”</span>
+
+<span class="tok-comment"># Target: Linux x86_64 + arm64</span>
+<span class="tok-section">[[targets]]</span>
+<span class="tok-key">os</span>   = <span class="tok-str">“linux”</span>
+<span class="tok-key">arch</span> = <span class="tok-str">“amd64”</span>
+<span class="tok-section">[[targets.distros]]</span>
+<span class="tok-key">name</span>    = <span class="tok-str">“ubuntu”</span>
+<span class="tok-key">version</span> = <span class="tok-str">“22.04”</span>
+
+<span class="tok-section">[[targets]]</span>
+<span class="tok-key">os</span>   = <span class="tok-str">“linux”</span>
+<span class="tok-key">arch</span> = <span class="tok-str">“arm64”</span>
+
+<span class="tok-comment"># MBTQ metadata — Fibronrose trust anchor</span>
+<span class="tok-section">[metadata]</span>
+<span class="tok-key">fibronrose-threshold</span> = <span class="tok-num">0.382</span>
+<span class="tok-key">deafauth-tier</span>        = <span class="tok-num">1</span>
+<span class="tok-key">gateway</span>              = <span class="tok-str">”@mbtq/gateway”</span>
+<span class="tok-key">paseto-version</span>       = <span class="tok-str">“v4”</span>
+</div>
+</div>
+</div>
+
+```
+<!-- Exec Env Selector + Layer TOML -->
+<div class="block">
+  <div class="block-header">
+    <span class="block-title">CNB_EXEC_ENV · Layer Config</span>
+    <span class="block-badge">runtime toggle</span>
+  </div>
+  <div class="block-body">
+    <div class="env-selector" role="group" aria-label="Select execution environment">
+      <button class="env-btn active" onclick="setEnv(this,'production')" aria-pressed="true">production</button>
+      <button class="env-btn" onclick="setEnv(this,'development')" aria-pressed="false">development</button>
+      <button class="env-btn" onclick="setEnv(this,'test')" aria-pressed="false">test</button>
+    </div>
+
+    <div id="env-note" class="env-note" role="status" aria-live="polite">
+      <strong>production</strong> — Release build, stripped binary, no dev-deps. Layer cache fully enabled. PASETO token required. Fibronrose threshold: 0.382.
+    </div>
+
+    <div style="margin-top:14px">
+      <div class="code-scroll" id="layer-toml" role="region" aria-label="Layer TOML for selected environment" tabindex="0">
+```
+
+<span class="tok-comment"># cargo-registry layer — production</span>
+<span class="tok-comment"># Restored from cache on rebuild</span>
+
+<span class="tok-section">[types]</span>
+<span class="tok-key">launch</span> = <span class="tok-kw">false</span>
+<span class="tok-key">build</span>  = <span class="tok-kw">true</span>
+<span class="tok-key">cache</span>  = <span class="tok-kw">true</span>
+
+<span class="tok-section">[metadata]</span>
+<span class="tok-key">cargo-version</span>   = <span class="tok-str">“1.78.0”</span>
+<span class="tok-key">rustc-version</span>   = <span class="tok-str">“1.78.0”</span>
+<span class="tok-key">profile</span>         = <span class="tok-str">“release”</span>
+<span class="tok-key">exec-env</span>        = [<span class="tok-str">“production”</span>]
+<span class="tok-key">mbtq-service</span>    = <span class="tok-str">“pinkflow”</span>
+<span class="tok-key">mbtq-port</span>       = <span class="tok-num">3008</span>
+
+<span class="tok-comment"># binary layer — launch only</span>
+<span class="tok-section">[types]</span>
+<span class="tok-key">launch</span> = <span class="tok-kw">true</span>
+<span class="tok-key">build</span>  = <span class="tok-kw">false</span>
+<span class="tok-key">cache</span>  = <span class="tok-kw">false</span>
+
+<span class="tok-section">[metadata]</span>
+<span class="tok-key">binary</span>   = <span class="tok-str">“pinkflow”</span>
+<span class="tok-key">stripped</span> = <span class="tok-kw">true</span>
+<span class="tok-key">exec-env</span> = [<span class="tok-str">“production”</span>]
+</div>
+</div>
+</div>
+</div>
+
+  </div>
+
+  <!-- LAYER TYPE MATRIX -->
+
+  <div class="full-block" role="region" aria-label="Layer type matrix">
+    <div class="block-header">
+      <span class="block-title">Layer Type Matrix — Cargo Layers</span>
+      <span class="block-badge">CNB spec §Layer Types</span>
+    </div>
+    <div class="block-body" style="padding:0">
+      <table class="layer-table" role="table" aria-label="Layer type combinations and behavior">
+        <thead>
+          <tr>
+            <th scope="col">Layer</th>
+            <th scope="col">build</th>
+            <th scope="col">cache</th>
+            <th scope="col">launch</th>
+            <th scope="col">Metadata Restored</th>
+            <th scope="col">Layer Restored</th>
+            <th scope="col">Use Case</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code style="color:var(--amber)">cargo-registry</code></td>
+            <td class="bool-t">✓</td><td class="bool-t">✓</td><td class="bool-f">–</td>
+            <td class="restored-y">Yes</td><td class="restored-y">Yes</td>
+            <td style="color:var(--muted);font-size:0.62rem">Crates.io index, restored across builds</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--amber)">cargo-target</code></td>
+            <td class="bool-t">✓</td><td class="bool-t">✓</td><td class="bool-f">–</td>
+            <td class="restored-y">Yes</td><td class="restored-y">Yes</td>
+            <td style="color:var(--muted);font-size:0.62rem">Incremental compile cache — major speed win</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--amber)">pinkflow-bin</code></td>
+            <td class="bool-f">–</td><td class="bool-f">–</td><td class="bool-t">✓</td>
+            <td class="restored-y">Yes</td><td class="restored-n">No</td>
+            <td style="color:var(--muted);font-size:0.62rem">Stripped release binary in OCI image</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--amber)">rustup-toolchain</code></td>
+            <td class="bool-t">✓</td><td class="bool-t">✓</td><td class="bool-t">✓</td>
+            <td class="restored-y">Yes</td><td class="restored-y">Yes</td>
+            <td style="color:var(--muted);font-size:0.62rem">Toolchain in image (dev/test envs only)</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--amber)">dev-tools</code></td>
+            <td class="bool-t">✓</td><td class="bool-f">–</td><td class="bool-f">–</td>
+            <td class="restored-n">No</td><td class="restored-n">No</td>
+            <td style="color:var(--muted);font-size:0.62rem">cargo-audit, clippy — build-only, no cache</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--amber)">mbtq-exec.d</code></td>
+            <td class="bool-f">–</td><td class="bool-f">–</td><td class="bool-t">✓</td>
+            <td class="restored-y">Yes</td><td class="restored-n">No</td>
+            <td style="color:var(--muted);font-size:0.62rem">exec.d scripts inject PASETO + Fibronrose env at launch</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LAUNCH.TOML + SBOM -->
+
+  <div class="twin-grid">
+
+```
+<!-- launch.toml -->
+<div class="block">
+  <div class="block-header">
+    <span class="block-title">launch.toml</span>
+    <span class="block-badge">multi-env processes</span>
+  </div>
+  <div class="block-body">
+    <div class="code-scroll" role="region" aria-label="launch.toml process definitions" tabindex="0">
+```
+
+<span class="tok-comment"># PinkFlow launch process definitions</span>
+<span class="tok-comment"># exec-env restricts per CNB API 0.12</span>
+
+<span class="tok-section">[[processes]]</span>
+<span class="tok-key">type</span>        = <span class="tok-str">“web”</span>
+<span class="tok-key">command</span>     = [<span class="tok-str">”/workspace/pinkflow”</span>]
+<span class="tok-key">args</span>        = [<span class="tok-str">”–port”</span>, <span class="tok-str">“3008”</span>]
+<span class="tok-key">default</span>     = <span class="tok-kw">true</span>
+<span class="tok-key">working-dir</span> = <span class="tok-str">”/workspace”</span>
+<span class="tok-key">exec-env</span>    = [<span class="tok-str">“production”</span>]
+
+<span class="tok-section">[[processes]]</span>
+<span class="tok-key">type</span>        = <span class="tok-str">“dev”</span>
+<span class="tok-key">command</span>     = [<span class="tok-str">“cargo”</span>, <span class="tok-str">“watch”</span>]
+<span class="tok-key">args</span>        = [<span class="tok-str">”-x”</span>, <span class="tok-str">“run – –port 3008”</span>]
+<span class="tok-key">default</span>     = <span class="tok-kw">true</span>
+<span class="tok-key">working-dir</span> = <span class="tok-str">”/workspace”</span>
+<span class="tok-key">exec-env</span>    = [<span class="tok-str">“development”</span>]
+
+<span class="tok-section">[[processes]]</span>
+<span class="tok-key">type</span>        = <span class="tok-str">“test”</span>
+<span class="tok-key">command</span>     = [<span class="tok-str">“cargo”</span>, <span class="tok-str">“nextest”</span>, <span class="tok-str">“run”</span>]
+<span class="tok-key">default</span>     = <span class="tok-kw">true</span>
+<span class="tok-key">working-dir</span> = <span class="tok-str">”/workspace”</span>
+<span class="tok-key">exec-env</span>    = [<span class="tok-str">“test”</span>]
+
+<span class="tok-comment"># exec.d — injected before launch</span>
+<span class="tok-comment"># injects MBTQ_PASETO, FIBRONROSE_SCORE</span>
+<span class="tok-comment"># into the process environment</span>
+
+<span class="tok-comment"># Slice: ship only the binary</span>
+<span class="tok-section">[[slices]]</span>
+<span class="tok-key">paths</span> = [<span class="tok-str">“bin/pinkflow”</span>]
+</div>
+</div>
+</div>
+
+```
+<!-- SBOM + Build Plan -->
+<div class="block">
+  <div class="block-header">
+    <span class="block-title">SBOM Formats + Build Plan</span>
+    <span class="block-badge">CNB §5 + §SBOM</span>
+  </div>
+  <div class="block-body">
+    <div style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">Supported SBOM media types</div>
+    <div class="sbom-list">
+      <div class="sbom-row">
+        <span class="sbom-type">application/vnd.cyclonedx+json</span>
+        <span class="sbom-ext">.cdx.json</span>
+      </div>
+      <div class="sbom-row">
+        <span class="sbom-type">application/spdx+json</span>
+        <span class="sbom-ext">.spdx.json</span>
+      </div>
+      <div class="sbom-row">
+        <span class="sbom-type">application/vnd.syft+json</span>
+        <span class="sbom-ext">.syft.json</span>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;font-family:var(--mono);font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">Build Plan (detect output)</div>
+    <div class="code-scroll" style="max-height:160px" role="region" aria-label="Build plan TOML" tabindex="0">
+```
+
+<span class="tok-comment"># Contributions to the Build Plan</span>
+<span class="tok-comment"># written to $CNB_BUILD_PLAN_PATH</span>
+
+<span class="tok-section">[[provides]]</span>
+<span class="tok-key">name</span> = <span class="tok-str">“rust”</span>
+
+<span class="tok-section">[[provides]]</span>
+<span class="tok-key">name</span> = <span class="tok-str">“cargo”</span>
+
+<span class="tok-section">[[requires]]</span>
+<span class="tok-key">name</span> = <span class="tok-str">“rust”</span>
+
+<span class="tok-section">[requires.metadata]</span>
+<span class="tok-key">version</span>    = <span class="tok-str">“~1.78”</span>
+<span class="tok-key">edition</span>    = <span class="tok-str">“2021”</span>
+<span class="tok-key">mbtq-tier</span>  = <span class="tok-num">1</span>
+</div>
+</div>
+</div>
+
+  </div>
+
+  <!-- LIVE CARGO LOG -->
+
+  <div class="full-block" role="region" aria-label="Live Cargo build log">
+    <div class="block-header">
+      <span class="block-title">Live Cargo Build Log</span>
+      <span class="block-badge" id="log-status">● streaming</span>
+    </div>
+    <div class="cargo-log" id="cargo-log" role="log" aria-live="polite" tabindex="0">
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer" role="contentinfo">
+  <span><strong>PinkFlow</strong> · mbtq.dev · port 3008 · Deaf-first · CNB API 0.12</span>
+  <span>bilateral lifecycle · PASETO v4 · Fibronrose anchored</span>
+</footer>
+
+<script>
+// ============================================================
+// PHASE DATA
+// ============================================================
+const phases = {
+  detect: {
+    icon: '🔍', title: 'Detection', spec: 'Phase #1 · /bin/detect · CNB API 0.12',
+    inputs: [
+      { key: '$CNB_BUILD_PLAN_PATH', val: '/tmp/plan.toml',                    attr: 'E' },
+      { key: '$CNB_BUILDPACK_DIR',   val: '/cnb/buildpacks/mbtq.pinkflow.rust', attr: 'ER' },
+      { key: '$CNB_EXEC_ENV',        val: 'production',                         attr: 'AR' },
+      { key: '$CNB_PLATFORM_DIR',    val: '/platform',                           attr: 'AR' },
+    ],
+    outputs: [
+      { key: 'exit 0',               val: 'detection passed',       attr: '' },
+      { key: 'build plan',           val: 'provides: rust, cargo',  attr: '' },
+      { key: 'requires',             val: 'rust ~1.78',             attr: '' },
+    ],
+    note: 'PinkFlow examines Cargo.toml in the app directory. If found, exit 0 — detection passes. Writes requires/provides to $CNB_BUILD_PLAN_PATH. CNB_EXEC_ENV switches dependency sets (dev adds cargo-watch, test adds nextest).'
+  },
+  analysis: {
+    icon: '📂', title: 'Analysis', spec: 'Phase #2 · layer restore · CNB API 0.12',
+    inputs: [
+      { key: 'prev OCI image',       val: 'pinkflow.mbtq.dev/latest', attr: '' },
+      { key: 'buildpack group',      val: 'mbtq.pinkflow.rust',       attr: '' },
+    ],
+    outputs: [
+      { key: 'cargo-registry.toml', val: 'restored (cache=true)',     attr: '' },
+      { key: 'cargo-target.toml',   val: 'restored (cache=true)',     attr: '' },
+      { key: 'store.toml',          val: 'restored',                   attr: '' },
+    ],
+    note: 'Lifecycle restores layer metadata from the previous image. cargo-registry and cargo-target layers are fully restored from cache — incremental Rust compile is preserved across builds. launch=false,build=false layers are NOT restored.'
+  },
+  build: {
+    icon: '⚙️', title: 'Build', spec: 'Phase #5 · /bin/build · cargo build --release',
+    inputs: [
+      { key: '$CNB_LAYERS_DIR',   val: '/layers/mbtq.pinkflow.rust', attr: 'EIC' },
+      { key: '$CNB_BP_PLAN_PATH', val: '/tmp/buildpack-plan.toml',   attr: 'ER' },
+      { key: '$CNB_EXEC_ENV',     val: 'production',                  attr: 'AR' },
+      { key: 'CARGO_HOME',        val: '/layers/.../cargo-registry', attr: 'PATH' },
+    ],
+    outputs: [
+      { key: 'cargo-registry/', val: 'build=true, cache=true',  attr: '' },
+      { key: 'cargo-target/',   val: 'build=true, cache=true',  attr: '' },
+      { key: 'pinkflow-bin/',   val: 'launch=true',              attr: '' },
+      { key: 'launch.sbom.cdx.json', val: 'SBOM generated',    attr: '' },
+      { key: 'launch.toml',     val: 'web process defined',     attr: '' },
+    ],
+    note: 'cargo build --release runs inside /bin/build. CARGO_HOME and CARGO_TARGET_DIR point to layer directories — incremental compilation fully cached. SBOM written for all crates. exec.d scripts placed in mbtq-exec.d layer for PASETO injection at launch.'
+  },
+  export: {
+    icon: '📦', title: 'Export', spec: 'Phase #6 · OCI image assembly',
+    inputs: [
+      { key: 'pinkflow-bin layer', val: 'launch=true, local dir', attr: '' },
+      { key: 'mbtq-exec.d layer', val: 'launch=true, local dir', attr: '' },
+      { key: 'run image',         val: 'ubuntu:22.04-slim',       attr: '' },
+    ],
+    outputs: [
+      { key: 'OCI image',          val: 'pinkflow.mbtq.dev:sha256-...', attr: '' },
+      { key: 'ENTRYPOINT',         val: '/cnb/lifecycle/launcher',      attr: '' },
+      { key: 'process.type',       val: 'web (default)',                attr: '' },
+      { key: 'store.toml',         val: 'persisted in image',           attr: '' },
+    ],
+    note: 'Only launch=true layers are included in the final OCI image. cargo-registry and cargo-target (launch=false) are saved to cache only. Slices carve out bin/pinkflow as its own layer for efficient layer deduplication.'
+  },
+  launch: {
+    icon: '🚀', title: 'Launch / Runtime', spec: 'exec.d injection → process start',
+    inputs: [
+      { key: 'OCI image',       val: 'pinkflow.mbtq.dev:latest', attr: '' },
+      { key: 'CNB_PROCESS_TYPE', val: 'web (or dev / test)',     attr: '' },
+    ],
+    outputs: [
+      { key: 'MBTQ_PASETO',        val: 'injected by exec.d',   attr: 'env' },
+      { key: 'FIBRONROSE_SCORE',   val: '0.91 (injected)',       attr: 'env' },
+      { key: 'DEAFAUTH_TIER',      val: '1 (injected)',          attr: 'env' },
+      { key: '/workspace/pinkflow', val: '--port 3008',          attr: 'proc' },
+    ],
+    note: 'exec.d scripts run before the process starts. mbtq-exec.d/web/ injects PASETO token, Fibronrose trust score, and DeafAUTH tier into the environment. No audio dependency anywhere in the chain — fully visual-first.'
+  }
+};
+
+let currentPhase = 'detect';
+
+function selectPhase(el, phase) {
+  document.querySelectorAll('.phase-node').forEach(n => {
+    n.classList.remove('active');
+    n.setAttribute('aria-pressed', 'false');
+  });
+  el.classList.add('active');
+  el.setAttribute('aria-pressed', 'true');
+  currentPhase = phase;
+  renderDetail(phase);
+}
+
+function renderDetail(phase) {
+  const d = phases[phase];
+  const detail = document.getElementById('phase-detail');
+  detail.innerHTML = `
+    <div class="pd-header">
+      <span class="pd-icon">${d.icon}</span>
+      <div>
+        <div class="pd-title">${d.title}</div>
+        <div class="pd-spec">${d.spec}</div>
+      </div>
+    </div>
+    <div class="pd-grid">
+      <div class="pd-block">
+        <div class="pd-block-title">Inputs / Environment</div>
+        ${d.inputs.map(e => `
+          <div class="env-var">
+            <span class="env-key">${e.key}</span>
+            <span class="env-val">${e.val}</span>
+            ${e.attr ? `<span class="env-attr">[${e.attr}]</span>` : ''}
+          </div>`).join('')}
+      </div>
+      <div class="pd-block">
+        <div class="pd-block-title">Outputs / Effects</div>
+        ${d.outputs.map(e => `
+          <div class="env-var">
+            <span class="env-key">${e.key}</span>
+            <span class="env-val">${e.val}</span>
+            ${e.attr ? `<span class="env-attr">[${e.attr}]</span>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="env-note" style="margin-top:12px">${d.note}</div>
+  `;
+  detail.classList.add('visible');
+}
+
+// Init first phase
+renderDetail('detect');
+
+// Keyboard nav for phase nodes
+document.querySelectorAll('.phase-node').forEach((node, i, nodes) => {
+  node.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      node.click();
+    }
+    if (e.key === 'ArrowRight') nodes[Math.min(i+1, nodes.length-1)].focus();
+    if (e.key === 'ArrowLeft')  nodes[Math.max(i-1, 0)].focus();
+  });
+});
+
+// ============================================================
+// EXEC ENV SELECTOR
+// ============================================================
+const envNotes = {
+  production: '<strong>production</strong> — Release build, stripped binary, no dev-deps. Layer cache fully enabled. PASETO token required. Fibronrose threshold: 0.382.',
+  development: '<strong>development</strong> — cargo-watch enabled, debug symbols retained, cargo-audit runs on detect. All layers cached including toolchain. CNB_EXEC_ENV=development disables layer restore from prod image.',
+  test: '<strong>test</strong> — cargo-nextest, coverage tooling, no binary slice. Test layers are build=true, cache=false. SBOM still generated. Platform SHOULD NOT restore prod layers.',
+};
+
+const layerTomls = {
+  production: `<span class="tok-comment"># cargo-registry layer — production</span>
+<span class="tok-section">[types]</span>
+  <span class="tok-key">launch</span> = <span class="tok-kw">false</span>
+  <span class="tok-key">build</span>  = <span class="tok-kw">true</span>
+  <span class="tok-key">cache</span>  = <span class="tok-kw">true</span>
+<span class="tok-section">[metadata]</span>
+  <span class="tok-key">profile</span>  = <span class="tok-str">"release"</span>
+  <span class="tok-key">exec-env</span> = [<span class="tok-str">"production"</span>]
+  <span class="tok-key">stripped</span> = <span class="tok-kw">true</span>`,
+  development: `<span class="tok-comment"># cargo-registry layer — development</span>
+<span class="tok-section">[types]</span>
+  <span class="tok-key">launch</span> = <span class="tok-kw">false</span>
+  <span class="tok-key">build</span>  = <span class="tok-kw">true</span>
+  <span class="tok-key">cache</span>  = <span class="tok-kw">true</span>
+<span class="tok-section">[metadata]</span>
+  <span class="tok-key">profile</span>     = <span class="tok-str">"debug"</span>
+  <span class="tok-key">exec-env</span>    = [<span class="tok-str">"development"</span>]
+  <span class="tok-key">cargo-watch</span> = <span class="tok-kw">true</span>
+  <span class="tok-key">stripped</span>    = <span class="tok-kw">false</span>`,
+  test: `<span class="tok-comment"># test-tools layer — no cache</span>
+<span class="tok-section">[types]</span>
+  <span class="tok-key">launch</span> = <span class="tok-kw">false</span>
+  <span class="tok-key">build</span>  = <span class="tok-kw">true</span>
+  <span class="tok-key">cache</span>  = <span class="tok-kw">false</span>
+<span class="tok-section">[metadata]</span>
+  <span class="tok-key">profile</span>    = <span class="tok-str">"test"</span>
+  <span class="tok-key">exec-env</span>   = [<span class="tok-str">"test"</span>]
+  <span class="tok-key">nextest</span>    = <span class="tok-kw">true</span>
+  <span class="tok-key">coverage</span>   = <span class="tok-kw">true</span>`,
+};
+
+function setEnv(btn, env) {
+  document.querySelectorAll('.env-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
+  });
+  btn.classList.add('active');
+  btn.setAttribute('aria-pressed', 'true');
+
+  document.getElementById('env-note').innerHTML = envNotes[env];
+  document.getElementById('layer-toml').innerHTML = layerTomls[env];
+  document.getElementById('env-indicator').textContent = env;
+  document.getElementById('env-value-display').textContent = env;
+}
+
+// ============================================================
+// LIVE CARGO LOG
+// ============================================================
+const logLines = [
+  { cls: 'log-info', msg: 'lifecycle: executing /bin/detect (mbtq.pinkflow.rust)' },
+  { cls: 'log-ok',   msg: '  detect: Found Cargo.toml — detection passed (exit 0)' },
+  { cls: 'log-info', msg: 'lifecycle: phase #2 analysis — restoring layer metadata' },
+  { cls: 'log-ok',   msg: '  analysis: cargo-registry layer restored from cache (3.1 GB)' },
+  { cls: 'log-ok',   msg: '  analysis: cargo-target layer restored from cache (0.8 GB)' },
+  { cls: 'log-info', msg: 'lifecycle: executing /bin/build (mbtq.pinkflow.rust)' },
+  { cls: 'log-dim',  msg: '  build: CARGO_HOME=/layers/mbtq.pinkflow.rust/cargo-registry' },
+  { cls: 'log-dim',  msg: '  build: CARGO_TARGET_DIR=/layers/mbtq.pinkflow.rust/cargo-target' },
+  { cls: 'log-info', msg: '  Compiling pinkflow v1.0.0 (/workspace)' },
+  { cls: 'log-ok',   msg: '  Finished release [optimized] target(s) in 4.32s' },
+  { cls: 'log-info', msg: '  build: writing launch.toml — process type "web" (exec-env: production)' },
+  { cls: 'log-info', msg: '  build: generating SBOM → launch.sbom.cdx.json' },
+  { cls: 'log-ok',   msg: '  build: SBOM complete — 142 crates catalogued' },
+  { cls: 'log-info', msg: '  build: placing exec.d/web/mbtq-inject' },
+  { cls: 'log-ok',   msg: 'lifecycle: /bin/build exited 0' },
+  { cls: 'log-info', msg: 'lifecycle: phase #6 export — assembling OCI image' },
+  { cls: 'log-ok',   msg: '  export: pinkflow-bin layer → transferred (1 layer)' },
+  { cls: 'log-ok',   msg: '  export: mbtq-exec.d layer → transferred' },
+  { cls: 'log-dim',  msg: '  export: cargo-registry saved to cache (launch=false)' },
+  { cls: 'log-ok',   msg: '  export: image pushed → pinkflow.mbtq.dev@sha256:a4f9c3' },
+  { cls: 'log-ok',   msg: 'lifecycle: build complete ✓ — bilateral flow nominal' },
+  { cls: 'log-warn', msg: '  runtime: exec.d/web/mbtq-inject — injecting PASETO v4 token' },
+  { cls: 'log-ok',   msg: '  runtime: FIBRONROSE_SCORE=0.91 DEAFAUTH_TIER=1 — env set' },
+  { cls: 'log-ok',   msg: '  runtime: launching /workspace/pinkflow --port 3008' },
+];
+
+let logIdx = 0;
+const logEl = document.getElementById('cargo-log');
+
+function appendLog() {
+  if (logIdx >= logLines.length) logIdx = 0;
+  const l = logLines[logIdx++];
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2,'0')).join(':');
+  const line = document.createElement('div');
+  line.innerHTML = `<span class="log-ts">${ts}</span><span class="${l.cls}">${l.msg}</span>`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+  if (logEl.children.length > 30) logEl.removeChild(logEl.firstChild);
+}
+
+// Seed initial logs
+for (let i = 0; i < 12; i++) appendLog();
+setInterval(appendLog, 2600);
+</script>
+
+</body>
+</html>
